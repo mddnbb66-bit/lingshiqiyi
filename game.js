@@ -199,23 +199,28 @@ window.addEventListener('resize', onResize);
 class Tube {
   constructor(name, pts, rads, { capEnd = true } = {}) {
     this.name = name;
+    this.rads = rads;
+    this.capEnd = capEnd;
     this.curve = new THREE.CatmullRomCurve3(pts.map(([x, y, z]) => V3(x, y, z)), false, 'centripetal');
     this.len = this.curve.getLength();
     const n = Math.ceil(this.len / 0.5);
     this.rings = [];
-    for (let i = 0; i <= n; i++) {
-      const t = i / n;
-      const c = this.curve.getPointAt(t);
-      const tg = this.curve.getTangentAt(t);
-      const side = V3().crossVectors(tg, UP).normalize();
-      const up = V3().crossVectors(side, tg).normalize();
-      const u = t * (rads.length - 1);
-      const k = Math.min(Math.floor(u), rads.length - 2);
-      let r = lerp(rads[k], rads[k + 1], smooth(u - k));
-      const s = t * this.len;
-      if (capEnd) r *= Math.max(0.04, Math.sqrt(clamp((this.len - s) / 2.4, 0, 1)));
-      this.rings.push({ c, tg, side, up, r, s, fh: r * 0.55 });
-    }
+    for (let i = 0; i <= n; i++) this.rings.push(this.ringAt(i / n));
+  }
+  ringAt(t) {
+    const { rads } = this;
+    const c = this.curve.getPointAt(t);
+    const tg = this.curve.getTangentAt(t);
+    const side = V3().crossVectors(tg, UP).normalize();
+    const up = V3().crossVectors(side, tg).normalize();
+    const u = t * (rads.length - 1);
+    const k = Math.min(Math.floor(u), rads.length - 2);
+    let r = lerp(rads[k], rads[k + 1], smooth(u - k));
+    const s = t * this.len;
+    if (this.capEnd) r *= Math.max(0.04, Math.sqrt(clamp((this.len - s) / 2.4, 0, 1)));
+    // 断面宽度：溶洞多是扁的（沿层面溶蚀），宽度沿通道缓慢变化
+    const w = 1.15 + 0.45 * fbm(s * 0.09 + this.name.length * 7, 1.3, 2.1);
+    return { c, tg, side, up, r, s, fh: r * 0.55, w };
   }
   local(p) {
     let best = 0;
@@ -226,7 +231,8 @@ class Tube {
     }
     const g = this.rings[best];
     const d = V3().subVectors(p, g.c);
-    return { g, i: best, x: d.dot(g.side), y: d.dot(g.up), a: d.dot(g.tg) };
+    // x 按断面宽度归一，碰撞仍然用圆形判断
+    return { g, i: best, x: d.dot(g.side) / g.w, y: d.dot(g.up), a: d.dot(g.tg) };
   }
   contains(p, m = 0) {
     const { g, i, x, y, a } = this.local(p);
@@ -245,7 +251,7 @@ class Tube {
     if (len > r) { x *= r / len; y *= r / len; moved = true; }
     const fl = -g.fh + pr * 0.8;
     if (y < fl) { y = fl; moved = true; }
-    const q = g.c.clone().addScaledVector(g.side, x).addScaledVector(g.up, y).addScaledVector(g.tg, a);
+    const q = g.c.clone().addScaledVector(g.side, x * g.w).addScaledVector(g.up, y).addScaledVector(g.tg, a);
     return { inside: !moved, p: q, d: q.distanceTo(p), floor: L.y + g.fh, s: g.s, vol: this };
   }
   floorDist(p) {
@@ -313,7 +319,85 @@ const buildGeo = (pos, col, idx, self) => {
   geo.computeVertexNormals();
   return geo;
 };
-const rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
+const rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
+// 程序化表面细节：在片元着色器里按世界坐标算噪声，扰动法线（凹凸）、明暗和粗糙度，不需要贴图
+rockMat.onBeforeCompile = (sh) => {
+  sh.vertexShader = sh.vertexShader
+    .replace('#include <common>', '#include <common>\nvarying vec3 vRockW;')
+    .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvRockW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+  sh.fragmentShader = sh.fragmentShader
+    .replace('#include <common>', `#include <common>
+varying vec3 vRockW;
+float rh(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float rn(vec3 x) {
+  vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(rh(i), rh(i + vec3(1,0,0)), f.x), mix(rh(i + vec3(0,1,0)), rh(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(rh(i + vec3(0,0,1)), rh(i + vec3(1,0,1)), f.x), mix(rh(i + vec3(0,1,1)), rh(i + vec3(1,1,1)), f.x), f.y), f.z);
+}
+float rockH(vec3 p) {
+  // 颗粒 + 细裂纹 + 层理细纹
+  // 颗粒感为主，加一点压扁的层理纹；不用等值线裂纹（会变成等高线图案）
+  float h = rn(p * 7.0) * 0.45 + rn(p * 19.0) * 0.3 + rn(p * 53.0) * 0.25;
+  h += (rn(p * vec3(1.5, 14.0, 1.5)) - 0.5) * 0.25;
+  return h;
+}`)
+    .replace('#include <color_fragment>', `#include <color_fragment>
+float rockTone = rockH(vRockW);
+diffuseColor.rgb *= 0.78 + 0.42 * rockTone;`)
+    .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+roughnessFactor = clamp(0.98 - rn(vRockW * 5.0) * 0.35, 0.5, 1.0);`)
+    .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+{
+  float e = 0.004;
+  float h0 = rockH(vRockW);
+  vec3 g = vec3(rockH(vRockW + vec3(e, 0.0, 0.0)) - h0, rockH(vRockW + vec3(0.0, e, 0.0)) - h0, rockH(vRockW + vec3(0.0, 0.0, e)) - h0) / e;
+  vec3 gv = (viewMatrix * vec4(g, 0.0)).xyz;
+  normal = normalize(normal - 0.008 * (gv - dot(gv, normal) * normal));
+}`);
+};
+
+
+// ---- 岩壁细节：石灰岩溶洞 ----
+// Worley（细胞）噪声：溶蚀扇贝纹
+const worley = (x, y, z) => {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+  let d1 = 9;
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const cx = xi + dx + hash3(xi + dx, yi + dy, zi + dz);
+        const cy = yi + dy + hash3(xi + dx + 17, yi + dy + 31, zi + dz + 7);
+        const cz = zi + dz + hash3(xi + dx + 53, yi + dy + 11, zi + dz + 29);
+        const d = (x - cx) ** 2 + (y - cy) ** 2 + (z - cz) ** 2;
+        if (d < d1) d1 = d;
+      }
+    }
+  }
+  return Math.sqrt(d1);
+};
+const smax = (a, b, k) => {
+  const h = clamp(0.5 + (0.5 * (a - b)) / k, 0, 1);
+  return lerp(b, a, h) + k * h * (1 - h);
+};
+// 返回该点的径向位移（相对半径）和用于上色的几项
+const rockShape = (p, sn) => {
+  // 域扭曲后的大尺度起伏：溶洞断面不是圆的
+  const wx = fbm(p.x * 0.18 + 3.1, p.y * 0.18, p.z * 0.18) - 0.5;
+  const wz = fbm(p.x * 0.18, p.y * 0.18 + 7.3, p.z * 0.18) - 0.5;
+  const big = (fbm(p.x * 0.42 + wx * 2, p.y * 0.42, p.z * 0.42 + wz * 2) - 0.5) * 0.34;
+  // 水平层理：岩层台阶，侧壁最明显
+  const layerPh = p.y * 6.5 + (fbm(p.x * 0.6, 0, p.z * 0.6) - 0.5) * 4;
+  const layer = (Math.abs(Math.sin(layerPh)) - 0.64) * 0.07 * (1 - Math.abs(sn));
+  // 溶蚀扇贝纹：浅碟状凹坑，边缘锐利
+  const sc = worley(p.x * 3.2, p.y * 4.2, p.z * 2.4);
+  const scallop = (sc * sc) * 0.05;
+  // 细碎凹凸
+  const fine = (vnoise(p.x * 7, p.y * 7, p.z * 7) - 0.5) * 0.035;
+  // 洞顶垂挂的岩块与凹槽
+  const top = sn > 0.35 ? -Math.max(0, fbm(p.x * 1.3 + 9, p.y, p.z * 1.3) - 0.62) * 0.9 * (sn - 0.35) : 0;
+  const d = clamp(big + layer + scallop + fine + top, -0.1, 0.3); // 下限保证岩壁不侵入可游动范围（0.85r）
+  return { d, layerPh, sc };
+};
 
 // 碎石段：主通道这一段底部是碎石，剪踢不会扬起泥沙
 const ROCK_ZONE = [18, 30];
@@ -322,34 +406,60 @@ const isRock = (name, s) => name === 'main' && s > ROCK_ZONE[0] && s < ROCK_ZONE
 const floorSilt = (loc) => (loc.name === 'lake' ? 0.3 : isRock(loc.name, loc.s) ? 0.08 : 1);
 
 const tubeMesh = (tube) => {
-  const M = 30;
+  const M = 84;
+  const STEP = 0.16;
   const pos = [];
   const col = [];
   const idx = [];
   const b = V3();
-  for (const g of tube.rings) {
+  const nRings = Math.ceil(tube.len / STEP);
+  for (let i = 0; i <= nRings; i++) {
+    const g = tube.ringAt(i / nRings);
+    const rock = isRock(tube.name, g.s);
     for (let j = 0; j <= M; j++) {
       const th = (j / M) * Math.PI * 2;
       const cs = Math.cos(th);
       const sn = Math.sin(th);
-      b.copy(g.c).addScaledVector(g.side, cs * g.r).addScaledVector(g.up, sn * g.r);
-      const n = fbm(b.x * 0.55, b.y * 0.55, b.z * 0.55);
-      const rr = g.r * (0.84 + 0.4 * n);
-      let x = cs * rr;
+      b.copy(g.c).addScaledVector(g.side, cs * g.r * g.w).addScaledVector(g.up, sn * g.r);
+      const { d, layerPh, sc } = rockShape(b, sn);
+      const rr = g.r * (0.96 + d);
+      let x = cs * rr * g.w;
       let y = sn * rr;
-      const isFloor = y < -g.fh;
-      const rock = isRock(tube.name, g.s);
-      if (isFloor) { y = -g.fh + (fbm(b.x * 2, 0, b.z * 2) - 0.5) * (rock ? 0.28 : 0.1); x *= 1.06; }
+      // 底部：淤泥填平，和岩壁之间用平滑过渡（淤泥坡）
+      const ripple = Math.sin(b.x * 9 + b.z * 4 + fbm(b.x, 0, b.z) * 6) * 0.008;
+      const floorY = -g.fh + (fbm(b.x * 1.6, 0, b.z * 1.6) - 0.5) * (rock ? 0.22 : 0.07) + (rock ? 0 : ripple);
+      const silted = y < floorY + 0.12;
+      y = smax(y, floorY, 0.22);
+      if (y <= floorY + 0.02) x *= 1.04;
       b.copy(g.c).addScaledVector(g.side, x).addScaledVector(g.up, y);
       pos.push(b.x, b.y, b.z);
-      const k = 0.7 + 0.6 * n;
-      if (isFloor && rock) col.push(0.3 * k, 0.3 * k, 0.29 * k);
-      else if (isFloor) col.push(0.42 * k, 0.35 * k, 0.24 * k);
-      else if (sn > 0.5) col.push(0.17 * k, 0.17 * k, 0.15 * k);
-      else col.push(0.27 * k, 0.25 * k, 0.21 * k);
+      // 上色
+      const n = fbm(b.x * 0.9, b.y * 0.9, b.z * 0.9);
+      const ao = clamp(1 - Math.max(0, d) * 2.4, 0.35, 1) * (0.75 + 0.35 * clamp(sc, 0, 1));
+      let cr, cg, cb;
+      if (silted) {
+        const k = (0.85 + 0.3 * n) * (rock ? 0.8 : 1);
+        if (rock) { cr = 0.36 * k; cg = 0.35 * k; cb = 0.32 * k; }
+        else { cr = 0.46 * k; cg = 0.38 * k; cb = 0.26 * k; }
+      } else {
+        // 石灰岩：米灰色，层理明暗相间
+        const band = 0.88 + 0.12 * Math.sin(layerPh * 0.5 + n * 3);
+        const k = (0.7 + 0.5 * n) * band;
+        cr = 0.5 * k; cg = 0.46 * k; cb = 0.39 * k;
+        // 洞顶的黑色锰质斑
+        const mn = fbm(b.x * 1.8 + 4, b.y * 1.8, b.z * 1.8);
+        if (sn > 0.1 && mn > 0.56) { const m = clamp((mn - 0.56) * 6, 0, 0.8) * sn; cr *= 1 - m; cg *= 1 - m; cb *= 1 - m * 0.9; }
+        // 壁脚的淤泥覆盖：越靠近底部越黄褐
+        const h = y - floorY;
+        const coat = clamp(1 - h / (0.45 + 0.25 * n), 0, 1) * 0.85;
+        cr = lerp(cr, 0.44 * (0.8 + 0.3 * n), coat);
+        cg = lerp(cg, 0.36 * (0.8 + 0.3 * n), coat);
+        cb = lerp(cb, 0.25 * (0.8 + 0.3 * n), coat);
+      }
+      col.push(cr * ao, cg * ao, cb * ao);
     }
   }
-  for (let i = 0; i < tube.rings.length - 1; i++) {
+  for (let i = 0; i < nRings; i++) {
     for (let j = 0; j < M; j++) {
       const a = i * (M + 1) + j;
       const c = a + M + 1;
@@ -398,6 +508,116 @@ const lakeMesh = () => {
 };
 
 scene.add(lakeMesh(), tubeMesh(main), tubeMesh(branch));
+
+// ---- 岩块：碎石段的碎石、各处的塌落巨石、洞顶小钟乳 ----
+const lumpGeo = (seed, detail, tint, stretch = [1, 1, 1]) => {
+  const geo = new THREE.IcosahedronGeometry(1, detail);
+  const pa = geo.attributes.position;
+  const col = [];
+  const v = V3();
+  for (let i = 0; i < pa.count; i++) {
+    v.fromBufferAttribute(pa, i);
+    const n = fbm(v.x * 1.4 + seed, v.y * 1.4, v.z * 1.4 + seed);
+    // 削平几个面，让石块有棱角
+    const flat = Math.min(1, 0.7 + 0.6 * Math.abs(vnoise(v.x * 2.6 + seed, v.y * 2.6, v.z * 2.6) - 0.3));
+    v.multiplyScalar((0.72 + 0.55 * n) * flat).multiply(V3(...stretch));
+    pa.setXYZ(i, v.x, v.y, v.z);
+    const k = 0.75 + 0.4 * n;
+    col.push(tint[0] * k, tint[1] * k, tint[2] * k);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  // 二十面体是非索引几何，computeVertexNormals 会得到平面法线；按位置合并成平滑法线
+  const na = geo.attributes.normal;
+  const sums = new Map();
+  const key = (i) => `${pa.getX(i).toFixed(4)},${pa.getY(i).toFixed(4)},${pa.getZ(i).toFixed(4)}`;
+  for (let i = 0; i < pa.count; i++) {
+    const k = key(i);
+    const acc = sums.get(k) ?? V3();
+    acc.x += na.getX(i); acc.y += na.getY(i); acc.z += na.getZ(i);
+    sums.set(k, acc);
+  }
+  for (let i = 0; i < pa.count; i++) {
+    const n = sums.get(key(i)).clone().normalize();
+    na.setXYZ(i, n.x, n.y, n.z);
+  }
+  return geo;
+};
+const scatter = (geo, list) => {
+  const mesh = new THREE.InstancedMesh(geo, rockMat, list.length);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const e = new THREE.Euler();
+  for (const [i, it] of list.entries()) {
+    e.set(it.rx ?? Math.random() * 6.28, it.ry ?? Math.random() * 6.28, it.rz ?? Math.random() * 6.28);
+    q.setFromEuler(e);
+    m.compose(it.p, q, it.s);
+    mesh.setMatrixAt(i, m);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  scene.add(mesh);
+  return mesh;
+};
+{
+  const rubble = [];
+  const boulders = [];
+  const drips = [];
+  const floorPoint = (tube, t, lat) => {
+    const g = tube.ringAt(t);
+    return { g, p: g.c.clone().addScaledVector(g.side, lat * g.r * g.w * 0.7).addScaledVector(g.up, -g.fh) };
+  };
+  // 碎石段：密集的小碎石
+  for (let i = 0; i < 420; i++) {
+    const s0 = rand(ROCK_ZONE[0] + 0.3, ROCK_ZONE[1] - 0.3);
+    const { p } = floorPoint(main, s0 / main.len, rand(-1, 1));
+    const r = rand(0.03, 0.13) * (Math.random() < 0.12 ? 1.8 : 1);
+    p.y += r * 0.25;
+    rubble.push({ p, s: V3(r * rand(0.8, 1.4), r * rand(0.5, 0.8), r * rand(0.8, 1.3)) });
+  }
+  // 塌落巨石：半埋在淤泥里，靠近两侧，避开洞口和相机房间
+  for (const tube of [main, branch]) {
+    const count = Math.round(tube.len / 4.5);
+    for (let i = 0; i < count; i++) {
+      const s0 = rand(6, tube.len - 4);
+      const side = Math.random() < 0.5 ? -1 : 1;
+      const { g, p } = floorPoint(tube, s0 / tube.len, side * rand(0.75, 1.05));
+      const r = rand(0.16, 0.34) * (g.r / 1.3);
+      p.y -= r * 0.35;
+      boulders.push({ p, s: V3(r * rand(0.9, 1.5), r * rand(0.6, 0.9), r * rand(0.9, 1.4)) });
+    }
+  }
+  // 洞顶的小钟乳：只挂在贴近岩壁的高处，不挡路
+  for (const tube of [main, branch]) {
+    const count = Math.round(tube.len / 2.2);
+    for (let i = 0; i < count; i++) {
+      const t = rand(8, tube.len - 3) / tube.len;
+      const g = tube.ringAt(t);
+      const th = Math.PI / 2 + rand(-0.9, 0.9);
+      const p = g.c.clone().addScaledVector(g.side, Math.cos(th) * g.r * g.w * 0.98).addScaledVector(g.up, Math.sin(th) * g.r * 0.98);
+      const len = rand(0.05, 0.16);
+      drips.push({ p, s: V3(len * 0.22, len, len * 0.22), rx: Math.PI + rand(-0.15, 0.15), ry: rand(0, 6.28), rz: rand(-0.15, 0.15) });
+    }
+  }
+  scatter(lumpGeo(1.7, 2, [0.19, 0.185, 0.17]), rubble);
+  scatter(lumpGeo(5.3, 3, [0.27, 0.25, 0.21]), boulders);
+  const dripGeo = new THREE.ConeGeometry(1, 1, 7, 3, false);
+  dripGeo.translate(0, 0.5, 0);
+  {
+    const pa = dripGeo.attributes.position;
+    const col = [];
+    for (let i = 0; i < pa.count; i++) {
+      const y = pa.getY(i);
+      const w = 0.85 + 0.3 * vnoise(pa.getX(i) * 3, y * 6, pa.getZ(i) * 3);
+      pa.setX(i, pa.getX(i) * w);
+      pa.setZ(i, pa.getZ(i) * w);
+      const k = 0.85 + 0.25 * y;
+      col.push(0.55 * k, 0.52 * k, 0.46 * k);
+    }
+    dripGeo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    dripGeo.computeVertexNormals();
+  }
+  scatter(dripGeo, drips);
+}
 
 const surfaceMat = new THREE.MeshBasicMaterial({ color: 0x7fb8ac, transparent: true, opacity: 0.6, side: THREE.DoubleSide, fog: true });
 const surface = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), surfaceMat);
@@ -1655,5 +1875,20 @@ const nextTip = () => {
 nextTip();
 setInterval(nextTip, 4500);
 requestAnimationFrame(loop);
+
+// 调试入口：地址后加 ?debug 才开放，例如 __jdns.goto(25) 传送到主通道 25 米处
+if (new URLSearchParams(location.search).has('debug')) {
+  globalThis.__jdns = {
+    get G() { return G; },
+    P,
+    goto(s, tube = main) {
+      const g = tube.ringAt(clamp(s / tube.len, 0, 1));
+      P.pos.copy(g.c).addScaledVector(g.up, 0.1);
+      P.vel.set(0, 0, 0);
+      P.yaw = Math.atan2(-g.tg.x, -g.tg.z);
+      P.pitch = -0.1;
+    },
+  };
+}
 
 })();

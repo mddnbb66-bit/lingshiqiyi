@@ -26,3 +26,6 @@ python3 work/build.py
 
 ## 分支与说明
 规则、设计文档和工作记录在 `GloBal-Text` 分支。
+
+## 调试
+地址后加 `?debug`（如 `index.html?debug`），控制台可用 `__jdns.goto(25)` 传送到主通道 25 米处，`__jdns.G` / `__jdns.P` 查看状态。

@@ -424,3 +424,18 @@ const nextTip = () => {
 nextTip();
 setInterval(nextTip, 4500);
 requestAnimationFrame(loop);
+
+// 调试入口：地址后加 ?debug 才开放，例如 __jdns.goto(25) 传送到主通道 25 米处
+if (new URLSearchParams(location.search).has('debug')) {
+  globalThis.__jdns = {
+    get G() { return G; },
+    P,
+    goto(s, tube = main) {
+      const g = tube.ringAt(clamp(s / tube.len, 0, 1));
+      P.pos.copy(g.c).addScaledVector(g.up, 0.1);
+      P.vel.set(0, 0, 0);
+      P.yaw = Math.atan2(-g.tg.x, -g.tg.z);
+      P.pitch = -0.1;
+    },
+  };
+}
