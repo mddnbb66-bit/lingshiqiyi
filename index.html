@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>搅动泥沙 · 第一关 三米湖 · main-0.1.00</title>
+    <style>
+:root {
+  --ink: #e9e4d8;
+  --ink2: #9c978b;
+  --bg: #050807;
+  --panel: rgba(12, 16, 15, 0.86);
+  --line: rgba(233, 228, 216, 0.18);
+  --warn: #e0a24a;
+  --bad: #d9614c;
+  --good: #7fbf8a;
+  --font: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--font); overflow: hidden; user-select: none; }
+#view, #view canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.ov { position: fixed; inset: 0; pointer-events: none; }
+#whiteout { background: rgb(150, 128, 92); opacity: 0; mix-blend-mode: screen; }
+#vignette { background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.95) 100%); opacity: 0.5; }
+#redpulse { background: radial-gradient(ellipse at center, transparent 45%, rgba(120, 0, 0, 0.8) 100%); opacity: 0; }
+#fade { background: #000; opacity: 0; transition: opacity 1.2s; }
+#hud { position: fixed; inset: 0; pointer-events: none; display: none; }
+#hud.on { display: block; }
+#status { position: absolute; left: 18px; bottom: 16px; font-size: 13px; color: var(--ink2); line-height: 1.7; text-shadow: 0 1px 2px #000; }
+#status b { color: var(--ink); font-weight: 500; }
+#msg { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); max-width: 70vw; text-align: center; font-size: 17px; text-shadow: 0 1px 4px #000; transition: opacity 0.6s; }
+#prompt { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); font-size: 14px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 99px; background: rgba(0, 0, 0, 0.45); display: none; }
+#reticle { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: rgba(233, 228, 216, 0.5); }
+#hand { position: absolute; right: 22px; bottom: 18px; font-size: 13px; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.5); display: none; }
+#gauge { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 18px 22px; text-align: center; }
+#gauge.on { display: block; }
+#gauge .row { display: flex; gap: 22px; justify-content: center; margin-top: 8px; font-size: 13px; color: var(--ink2); }
+#gauge .row b { display: block; font-size: 20px; color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+#danmaku { position: fixed; left: 0; right: 0; top: 6%; height: 34%; pointer-events: none; overflow: hidden; }
+.dm { position: absolute; left: 100%; white-space: nowrap; font-size: 18px; color: #fff; text-shadow: 0 0 3px #000, 0 1px 2px #000; opacity: 0.85; will-change: transform; }
+#toasts { position: fixed; right: 18px; top: 18px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; z-index: 30; }
+.toast { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; min-width: 220px; animation: tin 0.4s ease-out; }
+.toast small { display: block; color: var(--ink2); font-size: 12px; }
+.toast .k { font-size: 12px; color: var(--warn); letter-spacing: 0.1em; }
+@keyframes tin { from { transform: translateX(30px); opacity: 0; } }
+.screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(3, 5, 5, 0.78); z-index: 20; overflow-y: auto; padding: 24px; }
+.screen.on { display: flex; }
+#title { background: radial-gradient(ellipse at 50% 30%, rgba(30, 60, 55, 0.5), rgba(2, 3, 3, 0.96) 70%); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 28px 32px; max-width: 760px; width: 100%; margin: auto; }
+.bare { text-align: center; max-width: 640px; }
+h1 { font-size: 64px; letter-spacing: 0.3em; margin: 0 0 4px; font-weight: 600; text-indent: 0.3em; }
+h2 { font-size: 24px; margin: 0 0 12px; font-weight: 600; }
+h3 { font-size: 15px; margin: 18px 0 6px; color: var(--ink2); font-weight: 500; }
+.sub { color: var(--ink2); letter-spacing: 0.2em; font-size: 13px; }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 22px; }
+button { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 99px; padding: 9px 20px; min-height: 44px; cursor: pointer; }
+button:hover { border-color: var(--ink); }
+button.pri { background: var(--ink); color: #111; border-color: var(--ink); }
+button.hell { border-color: var(--bad); color: var(--bad); }
+.tip { margin-top: 26px; color: var(--ink2); font-size: 13px; min-height: 2em; }
+.brief p { margin: 0 0 10px; }
+.keys { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 4px 12px; font-size: 13px; color: var(--ink2); margin-top: 10px; }
+kbd { font: 12px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: var(--ink); white-space: nowrap; }
+.note { font-size: 12px; color: var(--ink2); }
+.poem { list-style: none; padding: 0; margin: 0; }
+.poem li { padding: 3px 0; font-size: 15px; }
+.poem li.lock { color: #4f4c45; }
+.poem li.lock small { color: var(--ink2); font-size: 12px; margin-left: 8px; }
+.poem li.new { color: var(--warn); }
+.poem li.later { color: #6d695f; font-size: 13px; }
+.poem .bar { display: inline-block; vertical-align: middle; width: min(22em, 80%); height: 1.05em; border-radius: 4px; background: #1d211f; border: 1px solid #2c312e; }
+.credit { font-size: 12px; color: var(--ink2); margin: 10px 0 0; }
+.motto { margin: 14px 0 0; font-size: 16px; }
+.hellchk { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; min-height: 44px; font-size: 14px; color: var(--bad); cursor: pointer; }
+.hellchk input { width: 18px; height: 18px; accent-color: var(--bad); margin: 0; }
+.bigdepth { margin: 8px 0 6px; font-size: 13px; color: var(--ink2); }
+.bigdepth b { display: block; font-size: 56px; line-height: 1.1; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.stats { display: flex; flex-wrap: wrap; gap: 18px; margin: 10px 0 4px; }
+.stats div { font-size: 12px; color: var(--ink2); }
+.stats b { display: block; font-size: 22px; color: var(--ink); font-weight: 500; }
+#map { width: 100%; height: 300px; border-radius: 16px; background: #0b100f; border: 1px solid var(--line); display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink2); margin-top: 6px; }
+.legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 5px; }
+.mist { padding-left: 18px; margin: 4px 0; }
+.mist li { margin: 3px 0; }
+.achs { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.achs div { font-size: 13px; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; color: #55524b; }
+.achs div.ok { color: var(--ink); }
+.achs small { display: block; font-size: 12px; color: var(--ink2); }
+#lockhint { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); font-size: 12px; color: var(--ink2); background: rgba(0, 0, 0, 0.55); padding: 4px 12px; border-radius: 99px; display: none; z-index: 10; }
+.tog { font-size: 13px; color: var(--ink2); margin-top: 12px; }
+@media (max-width: 640px) { h1 { font-size: 40px; } .panel { padding: 20px; } .keys { grid-template-columns: auto 1fr; } }
+
+    </style>
+  </head>
+  <body>
+    <div id="view"></div>
+    <div class="ov" id="whiteout"></div>
+    <div class="ov" id="vignette"></div>
+    <div class="ov" id="redpulse"></div>
+    <div class="ov" id="fade"></div>
+    <div id="lockhint">无法锁定鼠标：按住鼠标拖动转头，或使用方向键</div>
+
+    <div id="hud">
+      <div id="reticle"></div>
+      <div id="status"></div>
+      <div id="msg"></div>
+      <div id="prompt"></div>
+      <div id="hand">✋ 握着导线 · W 朝出口 / S 朝线轮</div>
+      <div id="gauge">
+        <canvas id="spg" width="220" height="220"></canvas>
+        <div class="row">
+          <div><b id="g-depth">0.0</b>深度 m</div>
+          <div><b id="g-time">0:00</b>潜水时间</div>
+          <div><b id="g-hr">70</b>心率</div>
+        </div>
+      </div>
+    </div>
+    <div id="danmaku"></div>
+    <div id="toasts"></div>
+
+    <section class="screen on" id="title">
+      <div class="bare">
+        <h1>搅动泥沙</h1>
+        <p class="sub">STIRRING THE SILT · 第一关 · 三米湖</p>
+        <p class="motto">“头顶有岩石就是洞潜，哪怕只有3米深。”</p>
+        <label class="hellchk"><input type="checkbox" id="hell-chk" />地狱模式：喝了点酒，临时起意</label>
+        <div class="btns">
+          <button class="pri" data-act="start">开始下潜</button>
+          <button data-act="codex">死法图鉴</button>
+          <button data-act="danmaku" class="dmbtn">弹幕：开</button>
+        </div>
+        <p class="tip" id="title-tip"></p>
+        <p class="ver" style="position:fixed;right:12px;bottom:8px;font-size:11px;opacity:.35;margin:0">main-0.1.00</p>
+        <p class="note">建议佩戴耳机。所有声音实时合成，无需联网。</p>
+      </div>
+    </section>
+
+    <section class="screen" id="brief">
+      <div class="panel brief">
+        <h2 id="brief-h">任务简报</h2>
+        <div id="brief-body"></div>
+        <div class="keys">
+          <kbd>W A S D</kbd><span>游动（朝视线方向）</span>
+          <kbd>鼠标</kbd><span>转头</span>
+          <kbd>空格 / Shift</kbd><span>上升 / 下沉</span>
+          <kbd>F</kbd><span>切换蛙踢 / 剪踢</span>
+          <kbd>Tab（按住）</kbd><span>看压力表</span>
+          <kbd>E</kbd><span>系导线 / 拾取</span>
+          <kbd>Q（按住）</kbd><span>摸线</span>
+          <kbd>R（按住）</kbd><span>慢呼吸</span>
+          <kbd>L</kbd><span>开关头灯</span>
+          <kbd>B</kbd><span>弹幕开关</span>
+          <kbd>Esc</kbd><span>暂停</span>
+          <kbd>方向键</kbd><span>转头（备用）</span>
+        </div>
+        <div class="btns"><button class="pri" data-act="dive">入水</button><button data-act="title">返回</button></div>
+      </div>
+    </section>
+
+    <section class="screen" id="pause">
+      <div class="bare">
+        <h2>暂停</h2>
+        <p class="note">水下的时间也停了。只有这里。</p>
+        <div class="btns">
+          <button class="pri" data-act="resume">继续</button>
+          <button data-act="restart">重新下潜</button>
+          <button data-act="codex">死法图鉴</button>
+          <button data-act="danmaku" class="dmbtn">弹幕：开</button>
+          <button data-act="title">返回标题</button>
+        </div>
+        <p class="tip" id="pause-tip"></p>
+      </div>
+    </section>
+
+    <section class="screen" id="recap">
+      <div class="panel">
+        <p class="sub" id="recap-kind"></p>
+        <h2 id="recap-title"></h2>
+        <div class="bigdepth"><b id="recap-depth">0.0 米</b>最大深度</div>
+        <div class="stats" id="recap-stats"></div>
+        <canvas id="map" width="1400" height="600"></canvas>
+        <div class="legend">
+          <span><i style="background:#3a4541"></i>洞穴</span>
+          <span><i style="background:#e0a24a"></i>你的路线</span>
+          <span><i style="background:#fff"></i>导线</span>
+          <span><i style="background:#c98a5a"></i>能见度归零</span>
+          <span>◆ 相机 · ● 终点 · ▲ 警示牌 · ✕ 越过三分之一</span>
+        </div>
+        <h3>关键失误</h3>
+        <ul class="mist" id="recap-mist"></ul>
+        <h3>本次解锁的诗行</h3>
+        <ul class="poem" id="recap-poem"></ul>
+        <p class="note" id="recap-note" hidden>真实洞潜需要专门的洞潜培训与证书。</p>
+        <div class="btns">
+          <button class="pri" data-act="restart">再潜一次</button>
+          <button data-act="codex">死法图鉴</button>
+          <button data-act="title">返回标题</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="codex">
+      <div class="panel">
+        <h2>死法图鉴</h2>
+        <ul class="poem" id="codex-poem"></ul>
+        <p class="credit">打油诗来自网友创作</p>
+        <h3>成就</h3>
+        <div class="achs" id="codex-achs"></div>
+        <div class="btns"><button class="pri" data-act="back">返回</button></div>
+      </div>
+    </section>
+
+    <script src="three.classic.js"></script>
+    <script src="game.js"></script>
+  </body>
+</html>

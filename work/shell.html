@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>搅动泥沙 · 第一关 三米湖 · main-0.1.00</title>
+    <style>
+/*STYLE*/
+    </style>
+  </head>
+  <body>
+    <div id="view"></div>
+    <div class="ov" id="whiteout"></div>
+    <div class="ov" id="vignette"></div>
+    <div class="ov" id="redpulse"></div>
+    <div class="ov" id="fade"></div>
+    <div id="lockhint">无法锁定鼠标：按住鼠标拖动转头，或使用方向键</div>
+
+    <div id="hud">
+      <div id="reticle"></div>
+      <div id="status"></div>
+      <div id="msg"></div>
+      <div id="prompt"></div>
+      <div id="hand">✋ 握着导线 · W 朝出口 / S 朝线轮</div>
+      <div id="gauge">
+        <canvas id="spg" width="220" height="220"></canvas>
+        <div class="row">
+          <div><b id="g-depth">0.0</b>深度 m</div>
+          <div><b id="g-time">0:00</b>潜水时间</div>
+          <div><b id="g-hr">70</b>心率</div>
+        </div>
+      </div>
+    </div>
+    <div id="danmaku"></div>
+    <div id="toasts"></div>
+
+    <section class="screen on" id="title">
+      <div class="bare">
+        <h1>搅动泥沙</h1>
+        <p class="sub">STIRRING THE SILT · 第一关 · 三米湖</p>
+        <p class="motto">“头顶有岩石就是洞潜，哪怕只有3米深。”</p>
+        <label class="hellchk"><input type="checkbox" id="hell-chk" />地狱模式：喝了点酒，临时起意</label>
+        <div class="btns">
+          <button class="pri" data-act="start">开始下潜</button>
+          <button data-act="codex">死法图鉴</button>
+          <button data-act="danmaku" class="dmbtn">弹幕：开</button>
+        </div>
+        <p class="tip" id="title-tip"></p>
+        <p class="ver" style="position:fixed;right:12px;bottom:8px;font-size:11px;opacity:.35;margin:0">main-0.1.00</p>
+        <p class="note">建议佩戴耳机。所有声音实时合成，无需联网。</p>
+      </div>
+    </section>
+
+    <section class="screen" id="brief">
+      <div class="panel brief">
+        <h2 id="brief-h">任务简报</h2>
+        <div id="brief-body"></div>
+        <div class="keys">
+          <kbd>W A S D</kbd><span>游动（朝视线方向）</span>
+          <kbd>鼠标</kbd><span>转头</span>
+          <kbd>空格 / Shift</kbd><span>上升 / 下沉</span>
+          <kbd>F</kbd><span>切换蛙踢 / 剪踢</span>
+          <kbd>Tab（按住）</kbd><span>看压力表</span>
+          <kbd>E</kbd><span>系导线 / 拾取</span>
+          <kbd>Q（按住）</kbd><span>摸线</span>
+          <kbd>R（按住）</kbd><span>慢呼吸</span>
+          <kbd>L</kbd><span>开关头灯</span>
+          <kbd>B</kbd><span>弹幕开关</span>
+          <kbd>Esc</kbd><span>暂停</span>
+          <kbd>方向键</kbd><span>转头（备用）</span>
+        </div>
+        <div class="btns"><button class="pri" data-act="dive">入水</button><button data-act="title">返回</button></div>
+      </div>
+    </section>
+
+    <section class="screen" id="pause">
+      <div class="bare">
+        <h2>暂停</h2>
+        <p class="note">水下的时间也停了。只有这里。</p>
+        <div class="btns">
+          <button class="pri" data-act="resume">继续</button>
+          <button data-act="restart">重新下潜</button>
+          <button data-act="codex">死法图鉴</button>
+          <button data-act="danmaku" class="dmbtn">弹幕：开</button>
+          <button data-act="title">返回标题</button>
+        </div>
+        <p class="tip" id="pause-tip"></p>
+      </div>
+    </section>
+
+    <section class="screen" id="recap">
+      <div class="panel">
+        <p class="sub" id="recap-kind"></p>
+        <h2 id="recap-title"></h2>
+        <div class="bigdepth"><b id="recap-depth">0.0 米</b>最大深度</div>
+        <div class="stats" id="recap-stats"></div>
+        <canvas id="map" width="1400" height="600"></canvas>
+        <div class="legend">
+          <span><i style="background:#3a4541"></i>洞穴</span>
+          <span><i style="background:#e0a24a"></i>你的路线</span>
+          <span><i style="background:#fff"></i>导线</span>
+          <span><i style="background:#c98a5a"></i>能见度归零</span>
+          <span>◆ 相机 · ● 终点 · ▲ 警示牌 · ✕ 越过三分之一</span>
+        </div>
+        <h3>关键失误</h3>
+        <ul class="mist" id="recap-mist"></ul>
+        <h3>本次解锁的诗行</h3>
+        <ul class="poem" id="recap-poem"></ul>
+        <p class="note" id="recap-note" hidden>真实洞潜需要专门的洞潜培训与证书。</p>
+        <div class="btns">
+          <button class="pri" data-act="restart">再潜一次</button>
+          <button data-act="codex">死法图鉴</button>
+          <button data-act="title">返回标题</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="codex">
+      <div class="panel">
+        <h2>死法图鉴</h2>
+        <ul class="poem" id="codex-poem"></ul>
+        <p class="credit">打油诗来自网友创作</p>
+        <h3>成就</h3>
+        <div class="achs" id="codex-achs"></div>
+        <div class="btns"><button class="pri" data-act="back">返回</button></div>
+      </div>
+    </section>
+
+    <script src="three.classic.js"></script>
+    <script src="game.js"></script>
+  </body>
+</html>
