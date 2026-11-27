@@ -39,14 +39,26 @@ const TIPS = [
   '“看了半年神秘园，并不会让你强得可怕。”',
   '“至少带三个光源。”',
 ];
+// 弹幕全部摘自 B 站神秘园洞潜视频的真实弹幕（2026-11-27 抓取），已去掉当事人姓名
 const DM = {
-  start: ['又是临时起意'],
-  ambient: ['看了半年神秘园的我表示：', '小牟来了吗'],
-  sign: ['已经进入神秘园流程了'],
-  third: ['已经进入神秘园流程了'],
-  silt: ['已经进入神秘园流程了', '三米也能死？'],
-  win: ['看了半年神秘园的我表示：'],
-  die: ['三米也能死？', '这个洞要糊水泥了', '新人又至，再创佳绩'],
+  start: ['请选择你的英雄', '角色未解锁', '大家好，他是神秘园', '有没有一起洞潜的，我有神秘园50集观看经验', '我看了六十多集，还能不知道？', '看神秘园学的（doge）', '远程教学：看神秘园视频学习', '来科研的？那我得坐起来看', '神秘园大厅正在匹配威胁对手中', '不出意外的话要出意外了'],
+  hell: ['临 时 起 意', '我负责临时起意', '临时起意²', '匹配到对手：临时起意', '太漂亮了，我要临时起意了（', '临时起意，来都来了，不出意外', '我滴妈超级无敌级别的临时起意……', 'buff：临时起意', 'debuff：二手装备', '在转转买的二手货出问题了'],
+  untied: ['buff1：不带引绳', '我负责忘带牵引绳', '我负责不带引导绳', '要是带引绳的话就没有这期视频了', '没有引绳，洞里转几圈就不知道方向了！这也是洞潜容易出事的原因之一', 'buff:没有引绳'],
+  enter: ['新地图解锁', '发现了新的区域哦', '哇，还有未解锁区域！', '初极狭，才通人', '复行数十步，豁然开朗', '到达神秘园区域', '然后进入了神秘园', '我靠，这么窄？', '幽闭恐惧症的我已经窒息了', '天呐，真是胆大，这么小的口也敢钻'],
+  sign: ['这不放个死神警示牌', '经典死神', '休想将我们拒之门外', '《休想把我们拒之门外》', '停下来！这将使你免于死亡！不要再继续走下去了！', '看到石头上的神秘园还不跑', '《洞潜爱好者的天堂》', '《潜水爱好者的天堂》'],
+  branch: ['这个洞可太适合岔路了', '我光看平面图就已经迷路了', '前有隐藏道路', '发现隐藏副本', '后面的区域以后再来探索吧（）', '管理方：前面的区域以后再来探索吧'],
+  third: ['buff4：未遵循三分法则', '经典违反"三分法则"', 'buff: 违背三分法则（1/1）', '《0分法则》', '来都来了', '主线轮：第一次警告', '时间差不多了哦', '死神：时间确实不够了，这你都发现了'],
+  silt: ['我负责搅动泥沙', '触发关键事件：搅动泥沙', '搅动泥沙！扬起浮尘！', '我负责搅起泥沙.jpg', '淤泥……视野可能丧失警告', 'buff3:狭窄且淤泥多', 'debuff：无引导绳＋视野不清楚', '提醒：你可以呼吸，不用怕气泡淤泥'],
+  flutter: ['有没有可能是他游太快把泥土拌起来，能见度降低了，然后。。。。', '第四个是 不要游太快', '不慌不忙反而没事', '就是太自信了 又要游的比别人快'],
+  settle: ['泥沙沉积，运动停息~', '其实此时冷静并保持静止悬浮才是正确的选择'],
+  back: ['倒踢是潜水踢法里最难的，所有入门的技术潜水课都会教'],
+  panic: ['我 负 责 惊 慌 失 措', 'buff5：惊慌失措', 'buff8：情绪紧张', '快放我上去，求你了，快放我上去', '放我出去我不要在这！', '黑漆漆的多吓人啊，你知道这水里突然出来个什么东西啊！', '被水淹没，不知所措'],
+  lowgas: ['buff4：能省则省', '传奇省钱王', '《钱花在刀刃上》', 'buff2：没有带备用气瓶', '时间差不多了哦'],
+  camera: ['相机都知道留冗余', '全身上下质量最好的是相机', '哎呀，相机得了MVP！（doge）', '发现关键道具'],
+  ambient: ['这洞穴好像一具古兽遗骸的头啊', '像一个怪物伸出来的舌头', '干这一行就是需要绝对理性啊', '越是专业强大越是谨慎有自知之明', '步步为营这才是专业', '专业就是谨慎', '看神秘园就是减压！', '《潜水员戴夫》启动！', '敬畏生命！家人还在等你回家', '那这时候就要快出现意外了', '石头上为什么会有神秘园三个字（doge'],
+  win: ['洞潜区传来喜讯', '洞潜圈传来喜讯', '罕见的好结局，洞潜区传来喜讯', '叮！恭喜获得成就：活着上神秘园', '少有上神秘园还活着的', '能在神秘园视频里活着，奇迹了', '恭喜触发好结局', '好结局：有惊无险', '搜救员：最轻松的一集', '活因：怕死', '别怀疑你的怕死机制'],
+  abort: ['活因：掉头回去', '最正确的决定', '理智的决定', '终于做了一个正确的决定', '谨慎在未知情况下总是不错的', '活因:对自己实力有正确的认识', '最明智的一集'],
+  die: ['洞潜区传来噩耗', '洞潜圈传来噩耗', '洞潜圈再次传来噩耗', 'MC洞潜圈传来噩耗', '这才是世界上最绝望的死法', '依旧英雄未解锁', '《英灵殿》', '这里已经满员了', '奖池还在累积', '高估了自己，低估了队友。', '这下知道怎么出的事了', '《下期预告》', '不想成为素材，谢谢', '潜水还是太危险了，我还是决定去走鳌太线了'],
 };
 const RECAP_TITLES = {
   win: ['生还 · 带回相机', '1人洞穴潜水，带着相机回来了'],
@@ -303,6 +315,12 @@ const buildGeo = (pos, col, idx, self) => {
 };
 const rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
 
+// 碎石段：主通道这一段底部是碎石，剪踢不会扬起泥沙
+const ROCK_ZONE = [18, 30];
+const isRock = (name, s) => name === 'main' && s > ROCK_ZONE[0] && s < ROCK_ZONE[1];
+// 底部扬尘系数：淤泥 1，湖底沙 0.3，碎石 0.08
+const floorSilt = (loc) => (loc.name === 'lake' ? 0.3 : isRock(loc.name, loc.s) ? 0.08 : 1);
+
 const tubeMesh = (tube) => {
   const M = 30;
   const pos = [];
@@ -320,11 +338,13 @@ const tubeMesh = (tube) => {
       let x = cs * rr;
       let y = sn * rr;
       const isFloor = y < -g.fh;
-      if (isFloor) { y = -g.fh + (fbm(b.x * 2, 0, b.z * 2) - 0.5) * 0.1; x *= 1.06; }
+      const rock = isRock(tube.name, g.s);
+      if (isFloor) { y = -g.fh + (fbm(b.x * 2, 0, b.z * 2) - 0.5) * (rock ? 0.28 : 0.1); x *= 1.06; }
       b.copy(g.c).addScaledVector(g.side, x).addScaledVector(g.up, y);
       pos.push(b.x, b.y, b.z);
       const k = 0.7 + 0.6 * n;
-      if (isFloor) col.push(0.42 * k, 0.35 * k, 0.24 * k);
+      if (isFloor && rock) col.push(0.3 * k, 0.3 * k, 0.29 * k);
+      else if (isFloor) col.push(0.42 * k, 0.35 * k, 0.24 * k);
       else if (sn > 0.5) col.push(0.17 * k, 0.17 * k, 0.15 * k);
       else col.push(0.27 * k, 0.25 * k, 0.21 * k);
     }
@@ -895,10 +915,8 @@ const startDive = (hell) => {
   mode = 'play';
   sound.suspend(false);
   lock();
-  if (hell) {
-    unlockLine(0);
-    dm('start');
-  }
+  if (hell) unlockLine(0);
+  dm(hell ? 'hell' : 'start');
   msg(hell ? '喝了点酒，临时起意。头灯在闪。' : '三米湖。洞口在湖底尽头。先找到洞口旁的桩，系好导线（E）。', 6);
 };
 
@@ -908,6 +926,7 @@ const pickCamera = () => {
   G.fear += 18;
   sound.ping();
   msg('阿杰的相机，红灯还亮着。现在，回去。', 6);
+  dm('camera');
 };
 
 const onAction = () => {
@@ -943,7 +962,7 @@ const endDive = (kind) => {
     else if (blind) unlockLine(8);
     ach('badNews');
   }
-  dm(alive ? 'win' : 'die', true);
+  dm(kind === 'win' ? 'win' : kind === 'abort' ? 'abort' : 'die', true);
   $('#gauge').classList.remove('on');
   if (document.pointerLockElement) document.exitPointerLock();
   $('#fade').style.opacity = 1;
@@ -966,16 +985,22 @@ const update = (dt) => {
 
   const slow = keys.has('KeyR');
   const f = forward();
-  const r = rightV();
+  const fwd = keys.has('KeyW') ? 1 : 0;
+  const back = keys.has('KeyS') && !fwd;
+  const heli = (keys.has('KeyA') ? 1 : 0) - (keys.has('KeyD') ? 1 : 0);
+  const vert = (keys.has('Space') ? 1 : 0) - (keys.has('KeyC') ? 1 : 0);
+  // 踢法：W 蛙踢（默认）；按住 Shift 剪踢冲刺；S 倒踢；A/D 直升机转身（原地转向，不前进）
+  const flutter = fwd && (keys.has('ShiftLeft') || keys.has('ShiftRight'));
+  G.kick = flutter ? 'flutter' : fwd ? 'frog' : back ? 'back' : heli ? 'heli' : vert ? 'frog' : 'glide';
+  if (heli && !G.holding) P.yaw += heli * 1.2 * dt;
   const move = V3()
-    .addScaledVector(f, (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0))
-    .addScaledVector(r, (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0))
-    .addScaledVector(UP, (keys.has('Space') ? 1 : 0) - (keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('KeyC') ? 1 : 0));
+    .addScaledVector(f, fwd)
+    .addScaledVector(V3(f.x, 0, f.z).normalize(), back ? -1 : 0)
+    .addScaledVector(UP, vert * 0.7);
   const kicking = move.lengthSq() > 0.01;
   if (kicking) move.normalize();
-  const flutter = G.kick === 'flutter';
-  const maxV = (flutter ? 1.6 : 1.0) * (slow ? 0.6 : 1) * (G.gas <= 0 ? 1.2 : 1);
-  const accel = flutter ? 3.2 : 2.2;
+  const maxV = (flutter ? 1.6 : back ? 0.45 : 1.0) * (slow ? 0.6 : 1) * (G.gas <= 0 ? 1.2 : 1);
+  const accel = flutter ? 3.2 : back ? 1.2 : 2.2;
 
   // 摸线
   G.holding = false;
@@ -994,7 +1019,8 @@ const update = (dt) => {
   }
   if (!G.holding) {
     P.vel.addScaledVector(move, accel * dt);
-    P.vel.multiplyScalar(Math.exp(-dt * 1.6));
+    // 蛙踢一下滑一段：不踢的时候阻力小，能滑行
+    P.vel.multiplyScalar(Math.exp(-dt * (kicking ? 1.6 : 0.9)));
     if (P.vel.length() > maxV) P.vel.setLength(lerp(P.vel.length(), maxV, 0.2));
   }
   P.pos.addScaledVector(P.vel, dt);
@@ -1022,7 +1048,8 @@ const update = (dt) => {
     G.stats.maxS = Math.max(G.stats.maxS, loc.s);
     if (!G.entered && loc.s > 4) {
       G.entered = true;
-      if (!guide.tied) { G.enteredUntied = true; msg('你没有系导线就进了洞。', 4); }
+      if (!guide.tied) { G.enteredUntied = true; msg('你没有系导线就进了洞。', 4); dm('untied'); }
+      else dm('enter');
     }
     if (!G.pastSign && loc.s > 9) {
       G.pastSign = true;
@@ -1035,27 +1062,34 @@ const update = (dt) => {
     if (further > G.pastThird) G.pastThird = further;
     if (G.pastThird > 3) ach('cameAnyway');
   }
-  if (loc.name === 'branch' && loc.s > 5 && !G.stats.wrong) G.stats.wrong = true;
+  if (loc.name === 'branch' && loc.s > 5 && !G.stats.wrong) { G.stats.wrong = true; dm('branch'); }
+  if (G.kick === 'back' && !G.warned.back) { G.warned.back = true; dm('back'); }
   if (loc.name === 'lake' && P.pos.y > -0.5 && keys.has('Space')) {
     if (G.entered) { endDive(G.hasCam ? 'win' : 'abort'); return; }
     if (!G.warned.surf) { G.warned.surf = true; msg('还没进洞。洞口在湖底尽头，警示牌后面。', 4); }
   }
 
   // 扬起泥沙
-  if (kicking && !G.holding) {
+  // 碎石段提示（只提示一次）
+  const onRock = isRock(loc.name, loc.s);
+  if (onRock && !G.warned.rock) { G.warned.rock = true; msg('脚下变成了碎石。这里剪踢不会扬起泥沙。', 4); }
+  if (!onRock && G.warned.rock && !G.warned.rockEnd && loc.name === 'main' && loc.s >= ROCK_ZONE[1]) { G.warned.rockEnd = true; msg('碎石到头了，前面又是淤泥。', 3.5); }
+
+  // 倒踢和直升机转身的推力不朝下，不扬泥
+  if (kicking && !G.holding && !back) {
     const fin = P.pos.clone().addScaledVector(V3(f.x, 0, f.z).normalize(), -0.7).add(V3(0, -0.45, 0));
     const fd = Math.max(0, loc.vol.floorDist(fin));
     const range = flutter ? 1.8 : 0.55;
     if (fd < range) {
-      const rate = (flutter ? 60 : 12) * (1 - fd / range) * clamp(P.vel.length() / maxV, 0.2, 1) * (G.hell ? 2.2 : 1);
+      const rate = (flutter ? 60 : 12) * floorSilt(loc) * (1 - fd / range) * clamp(P.vel.length() / maxV, 0.2, 1) * (G.hell ? 2.2 : 1);
       G.siltAcc += rate * dt;
       const n = Math.floor(G.siltAcc);
       if (n > 0) {
         G.siltAcc -= n;
         G.stats.silt += n;
         // 剪踢每一阵（间隔 2 秒以上）搅起淤泥记一次
-        if (flutter && n >= 1) {
-          if (G.t - G.lastFlutterSilt > 2) G.stats.flutterSilt++;
+        if (flutter && n >= 1 && floorSilt(loc) === 1) {
+          if (G.t - G.lastFlutterSilt > 2) { G.stats.flutterSilt++; if (G.stats.flutterSilt === 1) dm('flutter'); }
           G.lastFlutterSilt = G.t;
         }
         silt.spawn(fin.clone().add(V3(0, -fd, 0)), 0.5, flutter ? 0.8 : 0.4, n);
@@ -1073,7 +1107,7 @@ const update = (dt) => {
     ach('silt');
     dm('silt');
     if (!G.warned.zero) { G.warned.zero = true; msg('能见度归零。按住 Q 摸线，W 沿线朝出口。', 5); }
-  } else if (G.vis > 1.6) G.zeroVis = false;
+  } else if (G.vis > 1.6 && G.zeroVis) { G.zeroVis = false; dm('settle'); }
   if (G.zeroVis && !G.holding && G.entered) {
     G.stats.offLine += dt;
     if (guide.tied) G.stats.lostDist = Math.max(G.stats.lostDist, lineDist());
@@ -1093,7 +1127,7 @@ const update = (dt) => {
   applyAtmos(dayF, dens, G.torch ? ti / 26 : 0, G.vis);
 
   // 气体
-  const effort = clamp(P.vel.length() / 1.6, 0, 1) * (flutter ? 1.3 : 1);
+  const effort = clamp(P.vel.length() / 1.6, 0, 1) * (flutter ? 1.3 : back ? 0.6 : 1) + (heli ? 0.1 : 0);
   if (G.gas > 0) {
     const rate = 0.3 * (G.hell ? 1.25 : 1) * (1 + depth / 10) * (1 + effort * 0.5) * (G.hr / 72) ** 1.3 * (slow ? 0.8 : 1);
     G.gas = Math.max(0, G.gas - rate * dt);
@@ -1106,7 +1140,7 @@ const update = (dt) => {
         dm('third');
       }
     }
-    if (fr < 1 / 6 && !G.warned.crit) { G.warned.crit = true; msg('气不多了。', 3); }
+    if (fr < 1 / 6 && !G.warned.crit) { G.warned.crit = true; msg('气不多了。', 3); dm('lowgas'); }
     if (G.gas === 0) msg('吸不动了。呼吸器里只剩下金属的味道。上去！', 6);
   } else {
     G.outT += dt;
@@ -1128,7 +1162,7 @@ const update = (dt) => {
   G.hr += (tgt - G.hr) * k * dt;
   G.stats.hrMax = Math.max(G.stats.hrMax, Math.round(G.hr));
   const panic = clamp((G.hr - 115) / 65, 0, 1);
-  if (G.hr > 150 && !G.warned.panic) { G.warned.panic = true; msg('心跳太快了。按住 R，四下吸，六下呼。', 5); }
+  if (G.hr > 150 && !G.warned.panic) { G.warned.panic = true; msg('心跳太快了。按住 R，四下吸，六下呼。', 5); dm('panic'); }
   if (G.hr < 130) G.warned.panic = false;
   G.panicT = G.hr > 176 ? G.panicT + dt : Math.max(0, G.panicT - dt * 0.6);
   if (G.panicT > 5 && !G.warned.lose) { G.warned.lose = true; msg('你快要失控了——按住 R！', 4); }
@@ -1276,7 +1310,7 @@ const updateHud = (dt, slow) => {
   G.hudT = 0.25;
   const line = guide.tied ? `导线 <b>${Math.round(guide.length())} m</b>` : '导线 <b>未系</b>';
   $('#status').innerHTML = [
-    `${G.kick === 'frog' ? '<b>蛙踢</b>' : '<b>剪踢</b>'} <span>(F)</span>`,
+    `<b>${KICK_NAMES[G.kick] ?? '滑行'}</b>`,
     `头灯 <b>${G.torch ? '开' : '关'}</b> <span>(L)</span>`,
     line,
     G.hasCam ? '<b>相机已取</b>' : '',
@@ -1284,6 +1318,8 @@ const updateHud = (dt, slow) => {
     G.hell ? '<b style="color:#d9614c">地狱模式</b>' : '',
   ].filter(Boolean).join('<br>');
 };
+
+const KICK_NAMES = { frog: '蛙踢', flutter: '剪踢冲刺', back: '倒踢', heli: '直升机转身', glide: '滑行' };
 
 const drawGauge = () => {
   const cv = $('#spg');
@@ -1550,10 +1586,6 @@ window.addEventListener('keydown', (e) => {
   switch (e.code) {
     case 'Tab': $('#gauge').classList.add('on'); break;
     case 'KeyE': onAction(); break;
-    case 'KeyF':
-      G.kick = G.kick === 'frog' ? 'flutter' : 'frog';
-      msg(G.kick === 'frog' ? '蛙踢：慢，但不扰动底部。' : '剪踢：快，但会把泥沙卷起来。', 2.5);
-      break;
     case 'KeyL': G.torch = !G.torch; msg(G.torch ? '头灯开。' : '头灯关。黑暗是完整的。', 2); break;
     case 'KeyB': setDanmaku(!save.danmaku); msg(`弹幕${save.danmaku ? '开' : '关'}`, 1.5); break;
     case 'Escape': if (dragLook || !locked) pause(); break;

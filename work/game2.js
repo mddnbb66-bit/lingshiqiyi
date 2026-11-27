@@ -187,6 +187,12 @@ const buildGeo = (pos, col, idx, self) => {
 };
 const rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
 
+// 碎石段：主通道这一段底部是碎石，剪踢不会扬起泥沙
+const ROCK_ZONE = [18, 30];
+const isRock = (name, s) => name === 'main' && s > ROCK_ZONE[0] && s < ROCK_ZONE[1];
+// 底部扬尘系数：淤泥 1，湖底沙 0.3，碎石 0.08
+const floorSilt = (loc) => (loc.name === 'lake' ? 0.3 : isRock(loc.name, loc.s) ? 0.08 : 1);
+
 const tubeMesh = (tube) => {
   const M = 30;
   const pos = [];
@@ -204,11 +210,13 @@ const tubeMesh = (tube) => {
       let x = cs * rr;
       let y = sn * rr;
       const isFloor = y < -g.fh;
-      if (isFloor) { y = -g.fh + (fbm(b.x * 2, 0, b.z * 2) - 0.5) * 0.1; x *= 1.06; }
+      const rock = isRock(tube.name, g.s);
+      if (isFloor) { y = -g.fh + (fbm(b.x * 2, 0, b.z * 2) - 0.5) * (rock ? 0.28 : 0.1); x *= 1.06; }
       b.copy(g.c).addScaledVector(g.side, x).addScaledVector(g.up, y);
       pos.push(b.x, b.y, b.z);
       const k = 0.7 + 0.6 * n;
-      if (isFloor) col.push(0.42 * k, 0.35 * k, 0.24 * k);
+      if (isFloor && rock) col.push(0.3 * k, 0.3 * k, 0.29 * k);
+      else if (isFloor) col.push(0.42 * k, 0.35 * k, 0.24 * k);
       else if (sn > 0.5) col.push(0.17 * k, 0.17 * k, 0.15 * k);
       else col.push(0.27 * k, 0.25 * k, 0.21 * k);
     }
