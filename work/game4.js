@@ -75,10 +75,8 @@ const startDive = (hell) => {
   mode = 'play';
   sound.suspend(false);
   lock();
-  if (hell) {
-    unlockLine(0);
-    dm('start');
-  }
+  if (hell) unlockLine(0);
+  dm(hell ? 'hell' : 'start');
   msg(hell ? '喝了点酒，临时起意。头灯在闪。' : '三米湖。洞口在湖底尽头。先找到洞口旁的桩，系好导线（E）。', 6);
 };
 
@@ -88,6 +86,7 @@ const pickCamera = () => {
   G.fear += 18;
   sound.ping();
   msg('阿杰的相机，红灯还亮着。现在，回去。', 6);
+  dm('camera');
 };
 
 const onAction = () => {
@@ -123,7 +122,7 @@ const endDive = (kind) => {
     else if (blind) unlockLine(8);
     ach('badNews');
   }
-  dm(alive ? 'win' : 'die', true);
+  dm(kind === 'win' ? 'win' : kind === 'abort' ? 'abort' : 'die', true);
   $('#gauge').classList.remove('on');
   if (document.pointerLockElement) document.exitPointerLock();
   $('#fade').style.opacity = 1;
@@ -146,16 +145,22 @@ const update = (dt) => {
 
   const slow = keys.has('KeyR');
   const f = forward();
-  const r = rightV();
+  const fwd = keys.has('KeyW') ? 1 : 0;
+  const back = keys.has('KeyS') && !fwd;
+  const heli = (keys.has('KeyA') ? 1 : 0) - (keys.has('KeyD') ? 1 : 0);
+  const vert = (keys.has('Space') ? 1 : 0) - (keys.has('KeyC') ? 1 : 0);
+  // 踢法：W 蛙踢（默认）；按住 Shift 剪踢冲刺；S 倒踢；A/D 直升机转身（原地转向，不前进）
+  const flutter = fwd && (keys.has('ShiftLeft') || keys.has('ShiftRight'));
+  G.kick = flutter ? 'flutter' : fwd ? 'frog' : back ? 'back' : heli ? 'heli' : vert ? 'frog' : 'glide';
+  if (heli && !G.holding) P.yaw += heli * 1.2 * dt;
   const move = V3()
-    .addScaledVector(f, (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0))
-    .addScaledVector(r, (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0))
-    .addScaledVector(UP, (keys.has('Space') ? 1 : 0) - (keys.has('ShiftLeft') || keys.has('ShiftRight') || keys.has('KeyC') ? 1 : 0));
+    .addScaledVector(f, fwd)
+    .addScaledVector(V3(f.x, 0, f.z).normalize(), back ? -1 : 0)
+    .addScaledVector(UP, vert * 0.7);
   const kicking = move.lengthSq() > 0.01;
   if (kicking) move.normalize();
-  const flutter = G.kick === 'flutter';
-  const maxV = (flutter ? 1.6 : 1.0) * (slow ? 0.6 : 1) * (G.gas <= 0 ? 1.2 : 1);
-  const accel = flutter ? 3.2 : 2.2;
+  const maxV = (flutter ? 1.6 : back ? 0.45 : 1.0) * (slow ? 0.6 : 1) * (G.gas <= 0 ? 1.2 : 1);
+  const accel = flutter ? 3.2 : back ? 1.2 : 2.2;
 
   // 摸线
   G.holding = false;
@@ -174,7 +179,8 @@ const update = (dt) => {
   }
   if (!G.holding) {
     P.vel.addScaledVector(move, accel * dt);
-    P.vel.multiplyScalar(Math.exp(-dt * 1.6));
+    // 蛙踢一下滑一段：不踢的时候阻力小，能滑行
+    P.vel.multiplyScalar(Math.exp(-dt * (kicking ? 1.6 : 0.9)));
     if (P.vel.length() > maxV) P.vel.setLength(lerp(P.vel.length(), maxV, 0.2));
   }
   P.pos.addScaledVector(P.vel, dt);
@@ -202,7 +208,8 @@ const update = (dt) => {
     G.stats.maxS = Math.max(G.stats.maxS, loc.s);
     if (!G.entered && loc.s > 4) {
       G.entered = true;
-      if (!guide.tied) { G.enteredUntied = true; msg('你没有系导线就进了洞。', 4); }
+      if (!guide.tied) { G.enteredUntied = true; msg('你没有系导线就进了洞。', 4); dm('untied'); }
+      else dm('enter');
     }
     if (!G.pastSign && loc.s > 9) {
       G.pastSign = true;
@@ -215,27 +222,34 @@ const update = (dt) => {
     if (further > G.pastThird) G.pastThird = further;
     if (G.pastThird > 3) ach('cameAnyway');
   }
-  if (loc.name === 'branch' && loc.s > 5 && !G.stats.wrong) G.stats.wrong = true;
+  if (loc.name === 'branch' && loc.s > 5 && !G.stats.wrong) { G.stats.wrong = true; dm('branch'); }
+  if (G.kick === 'back' && !G.warned.back) { G.warned.back = true; dm('back'); }
   if (loc.name === 'lake' && P.pos.y > -0.5 && keys.has('Space')) {
     if (G.entered) { endDive(G.hasCam ? 'win' : 'abort'); return; }
     if (!G.warned.surf) { G.warned.surf = true; msg('还没进洞。洞口在湖底尽头，警示牌后面。', 4); }
   }
 
   // 扬起泥沙
-  if (kicking && !G.holding) {
+  // 碎石段提示（只提示一次）
+  const onRock = isRock(loc.name, loc.s);
+  if (onRock && !G.warned.rock) { G.warned.rock = true; msg('脚下变成了碎石。这里剪踢不会扬起泥沙。', 4); }
+  if (!onRock && G.warned.rock && !G.warned.rockEnd && loc.name === 'main' && loc.s >= ROCK_ZONE[1]) { G.warned.rockEnd = true; msg('碎石到头了，前面又是淤泥。', 3.5); }
+
+  // 倒踢和直升机转身的推力不朝下，不扬泥
+  if (kicking && !G.holding && !back) {
     const fin = P.pos.clone().addScaledVector(V3(f.x, 0, f.z).normalize(), -0.7).add(V3(0, -0.45, 0));
     const fd = Math.max(0, loc.vol.floorDist(fin));
     const range = flutter ? 1.8 : 0.55;
     if (fd < range) {
-      const rate = (flutter ? 60 : 12) * (1 - fd / range) * clamp(P.vel.length() / maxV, 0.2, 1) * (G.hell ? 2.2 : 1);
+      const rate = (flutter ? 60 : 12) * floorSilt(loc) * (1 - fd / range) * clamp(P.vel.length() / maxV, 0.2, 1) * (G.hell ? 2.2 : 1);
       G.siltAcc += rate * dt;
       const n = Math.floor(G.siltAcc);
       if (n > 0) {
         G.siltAcc -= n;
         G.stats.silt += n;
         // 剪踢每一阵（间隔 2 秒以上）搅起淤泥记一次
-        if (flutter && n >= 1) {
-          if (G.t - G.lastFlutterSilt > 2) G.stats.flutterSilt++;
+        if (flutter && n >= 1 && floorSilt(loc) === 1) {
+          if (G.t - G.lastFlutterSilt > 2) { G.stats.flutterSilt++; if (G.stats.flutterSilt === 1) dm('flutter'); }
           G.lastFlutterSilt = G.t;
         }
         silt.spawn(fin.clone().add(V3(0, -fd, 0)), 0.5, flutter ? 0.8 : 0.4, n);
@@ -253,7 +267,7 @@ const update = (dt) => {
     ach('silt');
     dm('silt');
     if (!G.warned.zero) { G.warned.zero = true; msg('能见度归零。按住 Q 摸线，W 沿线朝出口。', 5); }
-  } else if (G.vis > 1.6) G.zeroVis = false;
+  } else if (G.vis > 1.6 && G.zeroVis) { G.zeroVis = false; dm('settle'); }
   if (G.zeroVis && !G.holding && G.entered) {
     G.stats.offLine += dt;
     if (guide.tied) G.stats.lostDist = Math.max(G.stats.lostDist, lineDist());
@@ -273,7 +287,7 @@ const update = (dt) => {
   applyAtmos(dayF, dens, G.torch ? ti / 26 : 0, G.vis);
 
   // 气体
-  const effort = clamp(P.vel.length() / 1.6, 0, 1) * (flutter ? 1.3 : 1);
+  const effort = clamp(P.vel.length() / 1.6, 0, 1) * (flutter ? 1.3 : back ? 0.6 : 1) + (heli ? 0.1 : 0);
   if (G.gas > 0) {
     const rate = 0.3 * (G.hell ? 1.25 : 1) * (1 + depth / 10) * (1 + effort * 0.5) * (G.hr / 72) ** 1.3 * (slow ? 0.8 : 1);
     G.gas = Math.max(0, G.gas - rate * dt);
@@ -286,7 +300,7 @@ const update = (dt) => {
         dm('third');
       }
     }
-    if (fr < 1 / 6 && !G.warned.crit) { G.warned.crit = true; msg('气不多了。', 3); }
+    if (fr < 1 / 6 && !G.warned.crit) { G.warned.crit = true; msg('气不多了。', 3); dm('lowgas'); }
     if (G.gas === 0) msg('吸不动了。呼吸器里只剩下金属的味道。上去！', 6);
   } else {
     G.outT += dt;
@@ -308,7 +322,7 @@ const update = (dt) => {
   G.hr += (tgt - G.hr) * k * dt;
   G.stats.hrMax = Math.max(G.stats.hrMax, Math.round(G.hr));
   const panic = clamp((G.hr - 115) / 65, 0, 1);
-  if (G.hr > 150 && !G.warned.panic) { G.warned.panic = true; msg('心跳太快了。按住 R，四下吸，六下呼。', 5); }
+  if (G.hr > 150 && !G.warned.panic) { G.warned.panic = true; msg('心跳太快了。按住 R，四下吸，六下呼。', 5); dm('panic'); }
   if (G.hr < 130) G.warned.panic = false;
   G.panicT = G.hr > 176 ? G.panicT + dt : Math.max(0, G.panicT - dt * 0.6);
   if (G.panicT > 5 && !G.warned.lose) { G.warned.lose = true; msg('你快要失控了——按住 R！', 4); }

@@ -79,7 +79,7 @@ const updateHud = (dt, slow) => {
   G.hudT = 0.25;
   const line = guide.tied ? `导线 <b>${Math.round(guide.length())} m</b>` : '导线 <b>未系</b>';
   $('#status').innerHTML = [
-    `${G.kick === 'frog' ? '<b>蛙踢</b>' : '<b>剪踢</b>'} <span>(F)</span>`,
+    `<b>${KICK_NAMES[G.kick] ?? '滑行'}</b>`,
     `头灯 <b>${G.torch ? '开' : '关'}</b> <span>(L)</span>`,
     line,
     G.hasCam ? '<b>相机已取</b>' : '',
@@ -87,6 +87,8 @@ const updateHud = (dt, slow) => {
     G.hell ? '<b style="color:#d9614c">地狱模式</b>' : '',
   ].filter(Boolean).join('<br>');
 };
+
+const KICK_NAMES = { frog: '蛙踢', flutter: '剪踢冲刺', back: '倒踢', heli: '直升机转身', glide: '滑行' };
 
 const drawGauge = () => {
   const cv = $('#spg');
@@ -353,10 +355,6 @@ window.addEventListener('keydown', (e) => {
   switch (e.code) {
     case 'Tab': $('#gauge').classList.add('on'); break;
     case 'KeyE': onAction(); break;
-    case 'KeyF':
-      G.kick = G.kick === 'frog' ? 'flutter' : 'frog';
-      msg(G.kick === 'frog' ? '蛙踢：慢，但不扰动底部。' : '剪踢：快，但会把泥沙卷起来。', 2.5);
-      break;
     case 'KeyL': G.torch = !G.torch; msg(G.torch ? '头灯开。' : '头灯关。黑暗是完整的。', 2); break;
     case 'KeyB': setDanmaku(!save.danmaku); msg(`弹幕${save.danmaku ? '开' : '关'}`, 1.5); break;
     case 'Escape': if (dragLook || !locked) pause(); break;
